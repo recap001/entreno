@@ -7,6 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Entreno">
 <meta name="theme-color" content="#DADCDC">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <title>Entreno de hoy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@900&family=Inter:wght@400;500;600;700;800&display=swap">
@@ -30,8 +32,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible{outline:3px solid var(--red);outline-offset:3px}
 button:disabled{opacity:.35;cursor:default}
 
-.app{max-width:420px;margin:0 auto;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;
-  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+.app{max-width:420px;margin:0 auto;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 /* week */
@@ -41,21 +43,24 @@ button:disabled{opacity:.35;cursor:default}
 .wk-label{font-size:15px;font-weight:500;color:#5F6161}
 .wk-label b{color:var(--ink);font-weight:600}
 .today{border:0;background:none;color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:2px 4px}
+.status{font-size:11px;line-height:14px;color:var(--muted);display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap}
+.status:empty{display:none}
+.status button{background:none;border:0;color:var(--ink);font-weight:600;font-size:11px;text-decoration:underline;text-underline-offset:3px;padding:2px}
 
 /* session + dial */
 .top{display:flex;gap:12px;align-items:stretch}
 .sessions{flex:1;min-width:0;background:var(--well);border-radius:32px;padding:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px}
 .lbl{font-size:13px;font-weight:600;color:var(--muted)}
 .stack{display:flex;flex-direction:column;align-items:center;gap:10px}
-.sess{width:52px;height:52px;border-radius:50%;border:0;color:var(--ink);font-size:20px;font-weight:800}
+.sess{width:48px;height:48px;border-radius:50%;border:0;color:var(--ink);font-size:20px;font-weight:800}
 .sess[aria-pressed="true"]{box-shadow:0 0 0 3px var(--well),0 0 0 5px var(--ink)}
-.dial{width:200px;height:200px;border-radius:50%;background:var(--face);position:relative;flex:none}
+.dial{width:172px;height:172px;border-radius:50%;background:var(--face);position:relative;flex:none}
 .dial span{position:absolute;left:50%;top:50%}
-.trail{position:absolute;left:50%;top:50%;width:178px;height:178px;margin:-89px 0 0 -89px;border-radius:50%;pointer-events:none;
+.trail{position:absolute;left:50%;top:50%;width:154px;height:154px;margin:-77px 0 0 -77px;border-radius:50%;pointer-events:none;
   -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 18px),#000 calc(100% - 17.5px));
   mask:radial-gradient(farthest-side,transparent calc(100% - 18px),#000 calc(100% - 17.5px))}
-.hub{position:absolute;left:50%;top:50%;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 5px #D6D8D8;
-  display:grid;place-items:center;color:var(--face);font-family:var(--dots);font-weight:900;font-size:30px;font-variant-numeric:tabular-nums}
+.hub{position:absolute;left:50%;top:50%;width:104px;height:104px;margin:-52px 0 0 -52px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 4px #D6D8D8;
+  display:grid;place-items:center;color:var(--face);font-family:var(--dots);font-weight:900;font-size:26px;font-variant-numeric:tabular-nums}
 
 /* dot-grid panel: every block snaps to the 9px grid */
 .panel-wrap{flex:1 0 auto;display:flex;justify-content:center}
@@ -97,9 +102,6 @@ button:disabled{opacity:.35;cursor:default}
 .steps li.done{color:var(--bar-done);text-decoration:line-through}
 .steps li.now{color:var(--bar-ink);font-weight:700}
 .steps .dash{display:inline-block;width:4px;height:1px;background:var(--bar-done);vertical-align:middle;margin-right:3px}
-
-.status{font-size:12px;color:var(--muted);text-align:center;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:24px}
-.status button{background:none;border:0;color:var(--ink);font-weight:600;font-size:12px;text-decoration:underline;text-underline-offset:3px;padding:4px}
 </style>
 </head>
 <body>
@@ -109,6 +111,7 @@ button:disabled{opacity:.35;cursor:default}
     <div class="wk">
       <div class="wk-label" id="weekLabel">Cargando semana…</div>
       <button class="today" id="goToday" hidden>Volver a esta semana</button>
+      <div class="status" id="status"></div>
     </div>
     <button class="ring" id="nextWeek" aria-label="Semana siguiente" disabled><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
   </header>
@@ -144,8 +147,6 @@ button:disabled{opacity:.35;cursor:default}
     <ol class="steps" id="steps" aria-label="Ejercicios de la sesión"></ol>
     <button class="next" id="next" aria-label="Siguiente"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
   </nav>
-
-  <div class="status" id="status"></div>
 </div>
 
 <script>
@@ -324,8 +325,8 @@ function renderSessions(){
 }
 function renderDial(exs){
   const n=exs.length, step=360/n, ticks=$("ticks"); ticks.replaceChildren();
-  for(let k=0;k<48;k++) ticks.append(tick(k*7.5,2,2,92,"var(--minor)"));
-  exs.forEach((x,i)=>ticks.append(i===S.step ? tick(i*step,2.5,18,80,"var(--red)") : tick(i*step,1.5,18,80,i<S.step?"var(--red)":"var(--tick)")));
+  for(let k=0;k<48;k++) ticks.append(tick(k*7.5,2,2,79,"var(--minor)"));
+  exs.forEach((x,i)=>ticks.append(i===S.step ? tick(i*step,2.5,18,68,"var(--red)") : tick(i*step,1.5,18,68,i<S.step?"var(--red)":"var(--tick)")));
   const end=S.step*step;
   $("trail").style.background="conic-gradient(var(--red) 0deg "+end+"deg, transparent "+end+"deg 360deg)";
   $("count").textContent=(S.step+1)+"/"+n;
@@ -403,7 +404,7 @@ function renderStatus(){
   const s=$("status"); s.replaceChildren();
   if(!S.fetchedAt) return;
   const d=new Date(S.fetchedAt);
-  s.append(el("span",null,"Datos de Google Sheets · "+d.getHours()+":"+String(d.getMinutes()).padStart(2,"0")));
+  s.append(el("span",null,"Actualizado "+d.getHours()+":"+String(d.getMinutes()).padStart(2,"0")));
   const b=el("button",{id:"refresh"},"Actualizar"); b.onclick=()=>fetchData(true); s.append(b);
 }
 // keep the panel a whole number of grid cells wide so its right edge sits on the dots too
