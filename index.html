@@ -1,5 +1,13 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Entreno">
+<meta name="theme-color" content="#DADCDC">
 <title>Entreno de hoy</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@900&family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
@@ -14,14 +22,17 @@
   --cell:9px;
   color-scheme:light;
 }
-html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans)}
+*{-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible{outline:3px solid var(--red);outline-offset:3px}
 button:disabled{opacity:.35;cursor:default}
 
 .app{max-width:420px;margin:0 auto;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;
-  padding-block:20px 12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 /* week */
 .week{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -52,6 +63,7 @@ button:disabled{opacity:.35;cursor:default}
   background-image:radial-gradient(var(--grid-dot) 1.1px,transparent 1.4px);background-size:var(--cell) var(--cell);background-position:0 0;
   padding:calc(var(--cell)*2);display:flex;flex-direction:column;gap:calc(var(--cell)*3)}
 .panel h1{margin:0;font-size:40px;font-weight:800;line-height:36px;letter-spacing:-.03em;text-wrap:balance}
+.people{display:flex;flex-direction:column;gap:calc(var(--cell)*3)}
 .person{display:flex;flex-direction:column}
 .divider{height:18px;background:linear-gradient(var(--ink),var(--ink)) 0 0/100% 2px no-repeat}
 .pname{font-size:20px;font-weight:700;line-height:27px;color:#3F4141}
@@ -89,7 +101,8 @@ button:disabled{opacity:.35;cursor:default}
 .status{font-size:12px;color:var(--muted);text-align:center;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:24px}
 .status button{background:none;border:0;color:var(--ink);font-weight:600;font-size:12px;text-decoration:underline;text-underline-offset:3px;padding:4px}
 </style>
-
+</head>
+<body>
 <div class="app">
   <header class="week">
     <button class="ring" id="prevWeek" aria-label="Semana anterior" disabled><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -115,7 +128,7 @@ button:disabled{opacity:.35;cursor:default}
   <div class="panel-wrap" id="panelWrap" hidden>
     <section class="panel" id="panel" aria-live="polite">
       <h1 id="exName"></h1>
-      <div id="people" style="display:flex;flex-direction:column;gap:27px"></div>
+      <div class="people" id="people"></div>
     </section>
   </div>
 
@@ -137,6 +150,7 @@ button:disabled{opacity:.35;cursor:default}
 
 <script>
 const SHEET_ID = "19gUu7DdJLyB_Mvt89z9Dtkj5yI1heQjECgWnM9rzs1A";
+const SHEET_GID = 0; // "Tracker" tab
 const RANGE = "Tracker!A1:CY60";
 const SERVER = "Google Sheets";
 const MONTHS = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,sept:8,oct:9,nov:10,dic:11};
@@ -168,6 +182,22 @@ function save(){ try{ localStorage.setItem("entreno-state", JSON.stringify({day:
 function todayKey(){ const t=new Date(); return t.getFullYear()+"-"+(t.getMonth()+1)+"-"+t.getDate(); }
 
 /* ---------- parsing ---------- */
+function parseCSV(t){
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){
+      if(c==='"'){ if(t[i+1]==='"'){ f+='"'; i++; } else q=false; }
+      else f+=c;
+    }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=""; }
+    else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; }
+    else if(c!=='\r') f+=c;
+  }
+  if(f || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
 function parseDM(s){
   const m = String(s||"").trim().toLowerCase().match(/^(\d{1,2})\s+([a-zñ]+)/);
   if(!m || !(m[2] in MONTHS)) return null;
@@ -316,10 +346,9 @@ function renderPanel(ex){
       units.append(el("span",null,""));
     }else{
       const noLoad=v.w==="--"||!v.w, reps=v.r&&v.r!=="--"?v.r:"";
-      const kg=matrix(noLoad?"-":v.w,"kg"), rp=matrix(reps||"-","reps");
-      nums.append(kg, rp);
-      nums.setAttribute("aria-label",(noLoad?"sin carga":v.w+" kg")+(reps?", "+reps+" reps":""));
+      nums.append(matrix(noLoad?"-":v.w,"kg"), matrix(reps||"-","reps"));
       nums.setAttribute("role","img");
+      nums.setAttribute("aria-label",(noLoad?"sin carga":v.w+" kg")+(reps?", "+reps+" reps":""));
       units.append(el("span",null,noLoad?"sin carga":"kg"), el("span",null,"reps"));
     }
     row.append(nums, units);
@@ -337,8 +366,7 @@ function renderSteps(exs){
     ol.append(li);
   });
   $("back").disabled = S.step===0;
-  const last=S.step===exs.length-1;
-  $("next").setAttribute("aria-label", last?"Terminar":"Siguiente");
+  $("next").setAttribute("aria-label", S.step===exs.length-1?"Terminar":"Siguiente");
 }
 function renderDone(exs){
   const w=S.data.weeks[S.week];
@@ -401,13 +429,33 @@ document.addEventListener("keydown",e=>{
 /* ---------- keep screen on during the workout ---------- */
 let lock=null;
 async function wake(){ try{ if("wakeLock" in navigator && document.visibilityState==="visible") lock=await navigator.wakeLock.request("screen"); }catch(e){} }
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") wake(); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ wake(); if(S.data) fetchData(false); } });
 
 /* ---------- data ---------- */
+// Inside claude.ai the page reads the sheet through the Google Sheets connector.
+// Anywhere else (GitHub Pages, home-screen app) it reads the sheet's CSV export,
+// which works only while the sheet is shared as "Anyone with the link: Viewer".
 let mcp=null;
+async function getValues(refresh){
+  if(mcp){
+    const res=await mcp.callTool(SERVER,"get_values",{spreadsheetId:SHEET_ID,range:RANGE},{cache: refresh?{refresh:true,staleTime:60000}:{staleTime:60000}});
+    return { values:(res.payload||{}).values, at:(res.cache&&res.cache.storedAt)||Date.now() };
+  }
+  const url="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv&gid="+SHEET_GID+"&range=A1:CY60&t="+Date.now();
+  let r;
+  try{ r=await fetch(url,{cache:"no-store"}); }
+  catch(e){ throw {code: navigator.onLine===false ? "offline" : "not_shared"}; }
+  if(!r.ok) throw {code: r.status===404 ? "not_found" : "not_shared"};
+  const text=await r.text();
+  if(/^\s*</.test(text)) throw {code:"not_shared"};
+  return { values:parseCSV(text), at:Date.now() };
+}
 function errorCopy(err){
   const code=err&&err.code;
   switch(code){
+    case "not_shared": return ["No puedo leer la hoja","Abre la hoja en Google Sheets, pulsa Compartir y en «Acceso general» elige «Cualquier persona con el enlace» como Lector. Después pulsa Reintentar."];
+    case "not_found": return ["No encuentro la hoja","Comprueba que la hoja Workout tracker sigue existiendo y pulsa Reintentar."];
+    case "offline": return ["Sin conexión","Conéctate a internet y pulsa Reintentar."];
     case "needs_reauth": return ["Reconecta Google Sheets","La conexión con Google ha caducado. Vuelve a conectarla en claude.ai → Ajustes → Conectores y pulsa Reintentar."];
     case "server_not_connected": return ["Falta Google Sheets","Añade el conector de Google Sheets en claude.ai → Ajustes → Conectores para ver el entreno."];
     case "selection_required": return ["Elige la cuenta de Google","Tienes más de un conector de Google Sheets. Elige cuál usar en el aviso de claude.ai y pulsa Reintentar."];
@@ -419,15 +467,13 @@ function errorCopy(err){
   }
 }
 async function fetchData(refresh, retried){
-  if(!mcp) return;
   try{
-    const res=await mcp.callTool(SERVER,"get_values",{spreadsheetId:SHEET_ID,range:RANGE},{cache: refresh?{refresh:true,staleTime:60000}:{staleTime:60000}});
-    const payload=res.payload||{};
-    const data=parseSheet(payload.values);
+    const {values, at}=await getValues(refresh);
+    const data=parseSheet(values);
     if(!data){ showMessage("Hoja sin el formato esperado","No encuentro las filas «Weight / Reps» en la pestaña Tracker."); return; }
     const first=!S.data;
     S.data=data;
-    S.fetchedAt=(res.cache&&res.cache.storedAt)||Date.now();
+    S.fetchedAt=at;
     const today=new Date();
     S.todayWeek=data.weeks.findIndex(w=>w.start<=today && w.end>=today);
     if(first){
@@ -442,20 +488,16 @@ async function fetchData(refresh, retried){
     render(); renderStatus(); wake();
   }catch(err){
     if(err && err.retryable && !retried){ setTimeout(()=>fetchData(refresh,true), Math.min(err.retryAfterMs||1500+Math.random()*1500, 10000)); return; }
-    if(S.data && err && (err.code==="server_unavailable"||err.code==="upstream_error")){ $("status").replaceChildren(el("span",null,"No se ha podido actualizar; mostrando los últimos datos.")); return; }
+    if(S.data){ $("status").replaceChildren(el("span",null,"No se ha podido actualizar; mostrando los últimos datos.")); return; }
     const [t,m]=errorCopy(err);
-    S.data=null;
     $("weekLabel").textContent="Entreno";
     showMessage(t,m,{label:"Reintentar",run:()=>{ showMessage("Cargando tu entreno…","Leyendo la hoja de Google Sheets."); fetchData(true); }});
   }
 }
 (async()=>{
-  mcp = window.claude && window.claude.use ? await window.claude.use("mcp") : null;
-  if(!mcp){
-    $("weekLabel").textContent="Entreno";
-    showMessage("Ábrelo desde claude.ai","Esta página lee tu hoja de entrenamiento con el conector de Google Sheets. Ábrela desde claude.ai con tu cuenta para ver los pesos y reps de hoy.");
-    return;
-  }
+  try{ mcp = window.claude && window.claude.use ? await window.claude.use("mcp") : null; }catch(e){ mcp=null; }
   fetchData(false);
 })();
 </script>
+</body>
+</html>
